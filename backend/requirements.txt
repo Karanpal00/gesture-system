@@ -3,8 +3,6 @@ uvicorn
 numpy
 opencv-python-headless
 mediapipe
-face-recognition
-dlib
 onnxruntime
 joblib
 websockets
