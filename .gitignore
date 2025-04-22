@@ -7,6 +7,5 @@ __pycache__/
 *.onnx
 data/faces/
 data/raw/
-data/processed/
 models/
 .DS_Store
