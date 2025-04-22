@@ -6,6 +6,7 @@ from fastapi import FastAPI, UploadFile, Form
 from fastapi.middleware.cors import CORSMiddleware
 from gesture_system.services.face_service import FaceService
 from gesture_system.services.gesture_service import GestureService
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from scripts.train_model_pt import train_model_pt  # import your training script
 import cv2
 import numpy as np
