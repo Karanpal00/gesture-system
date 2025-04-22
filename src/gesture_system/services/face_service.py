@@ -1,50 +1,62 @@
-# src/gesture_system/services/face_service.py
-import pathlib
+import cv2
 import numpy as np
-import mediapipe as mp
+import pathlib
+import onnxruntime
+import joblib
+import time
+from gesture_system.utils import mp_holistic  # use mediapipe-only face detection here
 
 class FaceService:
-    def __init__(self, tolerance: float = 0.45, reauth_interval: float = 5.0):
-        # locate backend/data/faces
-        project_root = pathlib.Path(__file__).resolve().parent.parent.parent
-        faces_dir    = project_root / "backend" / "data" / "faces"
-        faces_dir.mkdir(parents=True, exist_ok=True)
-        self.faces_dir = faces_dir
-
-        # load any saved embeddings
-        self.known_embs = [
-            np.load(f) for f in faces_dir.glob("*.npy")
-        ]
-
-        self.detector = mp.solutions.face_detection.FaceDetection(
-            model_selection=0, min_detection_confidence=0.5
-        )
-        self.tolerance       = tolerance
+    def __init__(self, tolerance=0.45, reauth_interval=5.0):
+        self.cap = cv2.VideoCapture(0)
+        self.tolerance = tolerance
         self.reauth_interval = reauth_interval
-        self.last_check      = 0
-        self.authenticated   = False
+        self.last_check = 0
+        self.authenticated = False
+
+        # set up mediapipe face detection
+        self.face_detector = mp_holistic.Holistic(
+            static_image_mode=True,
+            model_complexity=0,
+        )
+
+        # load saved embeddings
+        self.face_dir = pathlib.Path("data/faces")
+        self.face_dir.mkdir(exist_ok=True, parents=True)
+        self.known_embs = []
+        for f in self.face_dir.glob("*.npy"):
+            self.known_embs.append(np.load(f))
+
+    def read_frame(self):
+        ok, frame = self.cap.read()
+        return frame if ok else None
+
+    def is_authenticated(self, frame):
+        now = time.time()
+        if now - self.last_check > self.reauth_interval:
+            self.authenticated = self._check_face(frame)
+            self.last_check = now
+        return self.authenticated
+
+    def _check_face(self, frame):
+        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        res = self.face_detector.process(rgb)
+        # Here you'd extract landmarks → embedding; for simplicity assume success if any face detected:
+        if res.face_landmarks:
+            # (in real use, compute embedding and compare to self.known_embs)
+            return True
+        return False
 
     def register_user(self, username: str, frame: np.ndarray):
-        """Detect first face, take its embedding, save as <username>.npy"""
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        results = self.detector.process(rgb)
-        if not results.detections:
+        res = self.face_detector.process(rgb)
+        if not res.face_landmarks:
             raise ValueError("No face detected")
-        # pick first detection box
-        box = results.detections[0].location_data.relative_bounding_box
-        h, w, _ = frame.shape
-        x1 = int(box.xmin * w)
-        y1 = int(box.ymin * h)
-        x2 = x1 + int(box.width * w)
-        y2 = y1 + int(box.height * h)
-        face_roi = frame[y1:y2, x1:x2]
-        # convert ROI to embedding via mediapipe face mesh → approximate
-        # here you'd insert your embedding routine or fallback to face_recognition
-        # For simplicity, we'll just flatten the ROI as a placeholder:
-        emb = cv2.resize(face_roi, (64,64)).flatten().astype(np.float32)
-        out_path = self.faces_dir / f"{username}.npy"
-        np.save(out_path, emb)
-        self.known_embs.append(emb)
+        # dummy embedding: flatten landmarks
+        emb = np.array([[lm.x, lm.y, lm.z] for lm in res.face_landmarks.landmark], dtype=np.float32).flatten()
+        path = self.face_dir / f"{username}.npy"
+        np.save(path, emb)
         return {"user": username}
 
-    # (optionally add methods to re-auth during predict if you want)
+    def __del__(self):
+        self.cap.release()
