@@ -3,7 +3,4 @@
 __pycache__/
 .venv/
 .env
-*.pkl
-*.onnx
-models/
 .DS_Store
