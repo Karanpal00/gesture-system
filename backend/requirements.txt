@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+numpy
+opencv-python-headless
+mediapipe
+face-recognition
+dlib
+onnxruntime
+joblib
+websockets
+python-multipart

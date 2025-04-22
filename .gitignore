@@ -1,0 +1,12 @@
+# .gitignore
+*.pyc
+__pycache__/
+.venv/
+.env
+*.pkl
+*.onnx
+data/faces/
+data/raw/
+data/processed/
+models/
+.DS_Store
