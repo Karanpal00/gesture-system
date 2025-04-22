@@ -14,8 +14,16 @@ MODEL_DIR = pathlib.Path("models"); MODEL_DIR.mkdir(exist_ok=True)
 
 # ---------------------  dataset utils  -----------------------------
 def load_data():
-    frames = [pd.read_csv(f) for f in DATA_DIR.glob("*.csv")]
+    csv_files = list(DATA_DIR.glob("*.csv"))
+    print(f"📂 Found {len(csv_files)} CSVs in {DATA_DIR}")
+    if not csv_files:
+        raise ValueError("❌ No CSV gesture data found in data/processed/")
+
+    frames = [pd.read_csv(f) for f in csv_files]
     df = pd.concat(frames, ignore_index=True)
+
+    if df.empty:
+        raise ValueError("❌ CSVs are empty — cannot train on empty dataset.")
 
     X = df.iloc[:, 2:].values.astype(np.float32)
     y = df.label.values
