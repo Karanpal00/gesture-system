@@ -3,7 +3,7 @@ import keyboard
 import numpy as np
 import joblib
 import onnxruntime
-from .utils import extract_hand_keypoints
+from ..utils import extract_hand_keypoints
 from mediapipe import solutions as mp_solutions
 
 class GestureService:
