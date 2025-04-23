@@ -85,3 +85,13 @@ async def predict(file: UploadFile = File(...)):
         return {"gesture": gesture, "binding": binding}
     except FileNotFoundError:
         raise HTTPException(503, "Model not found; please train first")
+
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses   import FileResponse
+
+# mount the build output
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+@app.get("/", include_in_schema=False)
+def serve_ui():
+    return FileResponse("static/index.html")
